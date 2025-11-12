@@ -1,6 +1,7 @@
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
+# from constants.constants import stocks_list
 import aap_stocks.src.stocks_list as stocks_list
 import os
 
@@ -25,7 +26,7 @@ def get_stock_data(tickers):
     return pd.DataFrame(results)
 
 # Lista de tickers
-tickers_list = stocks_list.stocks_list
+tickers_list = ("AAPL", "GOOGL", "NVDA", "SAN" ) # stocks_list.stocks_list
 
 print(tickers_list)
 
