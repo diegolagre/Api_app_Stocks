@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+aap_stocks.egg-info/PKG-INFO
+aap_stocks.egg-info/SOURCES.txt
+aap_stocks.egg-info/dependency_links.txt
+aap_stocks.egg-info/requires.txt
+aap_stocks.egg-info/top_level.txt
+app/__init__.py
+app/constants.py
+app/src/__init__.py
+app/src/get_data.py
+app/src/stocks_list.py

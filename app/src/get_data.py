@@ -26,7 +26,7 @@ def get_stock_data(tickers):
     return pd.DataFrame(results)
 
 # Lista de tickers
-tickers_list = ("AAPL", "GOOGL", "NVDA", "SAN" ) # stocks_list
+tickers_list =  stocks_list
 
 print(tickers_list)
 
