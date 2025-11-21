@@ -14,6 +14,9 @@ def get_stock_data(tickers):
         data = symbol.history(period="1d")
         if not data.empty:
             current_price = data["Close"].iloc[-1]
+
+
+            
             results.append({
                 "Date": today,
                 "Ticker": ticker,
@@ -28,7 +31,7 @@ def get_stock_data(tickers):
 # Lista de tickers
 tickers_list =  stocks_list
 
-print(tickers_list)
+# print(tickers_list)
 
 # Archivo histórico donde se guardarán los datos
 stocks_diarios = "stock_prices_history.csv"

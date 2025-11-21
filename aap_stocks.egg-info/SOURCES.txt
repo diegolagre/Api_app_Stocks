@@ -10,3 +10,4 @@ app/constants.py
 app/src/__init__.py
 app/src/get_data.py
 app/src/stocks_list.py
+tests/test_get_data.py
