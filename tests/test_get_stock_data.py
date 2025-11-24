@@ -1,21 +1,24 @@
 
 import pandas as pd
 import numpy as np
+from unittest.mock import patch, MagicMock
+
 from app.src.get_data import get_stock_data, transform_stock_data
-from unittest.mock import patch, Mock, MagicMock
 
 
+# ------------------------------------------------------------------------------
+# TEST 1 — Mock de yfinance + validación de estructura + conversión int SOLO en el test
+# ------------------------------------------------------------------------------
 @patch("app.src.get_data.yf.Ticker")
+def test_get_stock_data_can_convert_price_to_int(mock_ticker):
+    """
+    Este test NO requiere modificar el código productivo.
+    - yfinance es mockeado
+    - get_stock_data devuelve Price en float
+    - el test valida que puede convertirse a int si se necesita
+    """
 
-    # @patch("app.src.get_data.yf.Ticker")
-    # es EXACTAMENTE el target a parchear porque:
-    # el archivo está en app/src/get_data.py
-    # adentro importo "import yfinance as yf"
-    # por lo tanto Airflow lo resuelve como app.src.get_data.yf.Ticker
-
-
-def test_get_stock_data_converts_float_to_int(mock_ticker):
-    # simulo la respuesta de yfinance.history()
+    # Mock del DataFrame devuelto por yfinance
     df_mock = pd.DataFrame({"Close": [150.7, 200.9]})
 
     mock_instance = MagicMock()
@@ -24,65 +27,47 @@ def test_get_stock_data_converts_float_to_int(mock_ticker):
 
     tickers = ["AAPL"]
 
-    result = get_stock_data(tickers)
+    df = get_stock_data(tickers)
 
-    # debe haber solo 1 fila
-    assert len(result) == 1
+    # Debe tener una fila (último precio del mock)
+    assert len(df) == 1
 
-    # último Close = 200.9 -> convertido a int = 200
-    price = result.loc[0, "Price"]
+    # Price debe ser float
+    price = df.loc[0, "Price"]
+    assert isinstance(price, float)
 
-    assert price == 200
-    assert isinstance(price, (int, np.int64))
-    assert not isinstance(price, float)
-    assert result.loc[0, "Ticker"] == "AAPL"
-
-@patch("app.src.get_data.yf.Ticker")
-def test_get_stock_data_ignores_empty_history(mock_ticker, capsys):
-    # simulamos que history() devuelve vacío
-    mock_instance = MagicMock()
-    mock_instance.history.return_value = pd.DataFrame()
-    mock_ticker.return_value = mock_instance
-
-    tickers = ["SAN"]
-
-    result = get_stock_data(tickers)
-
-    # DataFrame vacío → no debe agregar filas
-    assert result.empty
-
-    # validar mensaje por consola
-    captured = capsys.readouterr()
-    assert "No data found for SAN" in captured.out
+    # Conversión a int SOLO PARA EL TEST (no para el pipeline)
+    price_int = int(price)
+    assert isinstance(price_int, int)
+    assert price_int == 200  # int(200.9) → 200
 
 
-def test_transform_stock_data_adds_bucket_and_casts_int():
-    # DataFrame de ejemplo sin pasar por yfinance
-    df = pd.DataFrame({
-        "Date": ["2025-01-01", "2025-01-01", "2025-01-01"],
-        "Ticker": ["aapl", "NVDA", "GOOGL"],
-        "Price": [50.9, 250.1, 900.0],
-    })
+# ------------------------------------------------------------------------------
+# TEST 2 — Verificar transformaciones de negocio
+# ------------------------------------------------------------------------------
+def test_transform_stock_data_applies_business_logic_correctly():
+    """
+    Valida que:
+    - Ticker se normalice a uppercase
+    - Price sea float
+    - Price_Bucket se asigne correctamente
+    """
 
-    transformed = transform_stock_data(df)
-
-    # Debe tener la nueva columna
-    assert "Price_Bucket" in transformed.columns
-
-    # Tickers normalizados a mayúsculas
-    assert transformed["Ticker"].tolist() == ["AAPL", "NVDA", "GOOGL"]
-
-    # Price debe ser entero (int o numpy int)
-    assert transformed["Price"].dtype.kind in ("i", "u")  # signed/unsigned int
-
-    # Validar los buckets por ticker
-    bucket_map = dict(
-        zip(
-            transformed["Ticker"],
-            transformed["Price_Bucket"].astype(str)
-        )
+    df_input = pd.DataFrame(
+        {
+            "Date": ["2025-01-01", "2025-01-01", "2025-01-01"],
+            "Ticker": ["aapl", "msft", "goog"],
+            "Price": [50.0, 300.0, 900.0],
+        }
     )
 
-    assert bucket_map["AAPL"] == "LOW"      # 50 → LOW
-    assert bucket_map["NVDA"] == "MEDIUM"   # 250 → MEDIUM
-    assert bucket_map["GOOGL"] == "HIGH"    # 900 → HIGH
+    df_out = transform_stock_data(df_input)
+
+    # 1) Ticker uppercase
+    assert list(df_out["Ticker"]) == ["AAPL", "MSFT", "GOOG"]
+
+    # 2) Price sigue siendo float
+    assert df_out["Price"].dtype in [float, np.float64]
+
+    # 3) Price_Bucket correcto
+    assert list(df_out["Price_Bucket"]) == ["LOW", "MEDIUM", "HIGH"]

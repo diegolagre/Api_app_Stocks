@@ -198,6 +198,51 @@ docker compose build
 
 ### 3. Inicializar Airflow:
 
+## 🧾 Atajos con Makefile para Airflow
+
+Para simplificar la ejecución de Docker + Airflow, el proyecto incluye un `Makefile` con comandos de ayuda.
+
+### Comandos disponibles
+
+```bash
+# Construir la imagen de Airflow (Dockerfile.airflow)
+make airflow-build
+
+# Inicializar la base de datos de Airflow
+make airflow-init
+
+# Crear usuario administrador de Airflow (admin / admin)
+make airflow-create-user
+
+# Levantar Airflow (webserver + scheduler + postgres)
+make airflow-up
+
+# Bajar todos los servicios de Airflow
+make airflow-down
+
+# Reset completo de Airflow:
+# - baja servicios
+# - borra volúmenes
+# - build de imagen
+# - init de DB
+# - crea usuario admin
+make airflow-reset
+
+Flujo para levantar Airflow desde cero:
+
+make airflow-build
+make airflow-init
+make airflow-create-user
+make airflow-up
+
+Luego, acceder a:
+
+UI: http://localhost:8080
+
+Usuario: admin
+
+Password: admin
+
 ```
 docker compose up airflow-init
 ```
