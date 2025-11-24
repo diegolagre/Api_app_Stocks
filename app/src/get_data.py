@@ -31,6 +31,36 @@ def get_stock_data(tickers):
     
     return pd.DataFrame(results)
 
+def transform_stock_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Aplica transformaciones de negocio al DataFrame de stocks:
+    - Normaliza el ticker a mayúsculas.
+    - Asegura que Price sea entero.
+    - Agrega una columna categórica Price_Bucket según el rango de precio.
+    """
+    if df.empty:
+        return df
+
+    df = df.copy()
+
+    # 1) Normalizar ticker a mayúsculas
+    df["Ticker"] = df["Ticker"].astype(str).str.upper()
+
+    # 2) Asegurar que Price sea numérico entero
+    df["Price"] = pd.to_numeric(df["Price"], errors="coerce").fillna(0).astype(int)
+
+    # 3) Agregar una columna categórica según el rango de precio
+    #    LOW:    Price <= 100
+    #    MEDIUM: 100 < Price <= 500
+    #    HIGH:   Price > 500
+    df["Price_Bucket"] = pd.cut(
+        df["Price"],
+        bins=[-1, 100, 500, float("inf")],
+        labels=["LOW", "MEDIUM", "HIGH"]
+    )
+
+    return df
+
 def main():
     # Lista de tickers
     tickers_list =  stocks_list
@@ -51,8 +81,13 @@ def main():
     else:
         df_combined = df_today
 
-    # Guardar el archivo actualizado
+    #  APLICAMOS LAS TRANSFORMACIONES DE NEGOCIO
+    df_combined = transform_stock_data(df_combined)
+
+    # Guardar el archivo actualizado a CSV
     df_combined.to_csv(stocks_diarios, index=False)
+
+
 
     # guarda también en Parquet como área de STAGING
     staging_dir = Path("data/staging")

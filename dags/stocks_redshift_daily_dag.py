@@ -1,3 +1,5 @@
+# dags/stocks_redshift_daily_dag.py
+
 from datetime import datetime, timedelta
 import os
 from pathlib import Path
@@ -6,37 +8,34 @@ import pandas as pd
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-# Importamos tu código de la app
 from app.src.get_data import get_stock_data
 from app.constants import stocks_list
-from app.src.redshift_loader import load_parquet_to_redshift 
+from app.src.redshift_loader import load_parquet_to_redshift
 
 
-# Ruta donde se va a guardar el histórico dentro del contenedor de Airflow
-STOCKS_FILE = "/opt/airflow/data/stock_prices_history.csv"
+# Rutas de datos dentro del contenedor de Airflow
+DATA_DIR = Path("/opt/airflow/data")
+CSV_PATH = DATA_DIR / "stock_prices_history.csv"
+PARQUET_PATH = DATA_DIR / "staging" / "stock_prices_history.parquet"
 
 
-def run_stocks_job(**context):
-    """
-    Job diario:
-    - Usa la lista de tickers de app.constants
-    - Llama a get_stock_data (que usa yfinance)
-    - Fuerza la columna Date a la fecha lógica del DAG (data_interval_start)
-    - Actualiza el CSV histórico evitando duplicados (Date + Ticker)
-    """
-    # Fecha lógica manejada por Airflow (backfill incluido)
-    run_date = context["data_interval_start"].to_date_string()  # YYYY-MM-DD
+def fetch_stocks_daily(**context):
+    """Tarea 1: obtiene precios, actualiza CSV y genera Parquet."""
+    run_date = context["data_interval_start"].to_date_string()
 
-    # 1) Obtener precios (tu función actual)
     df_today = get_stock_data(stocks_list)
 
-    # 2) Sobrescribimos Date con la fecha lógica del DAG
-    if not df_today.empty:
-        df_today["Date"] = run_date
+    if df_today.empty:
+        print(f"[{run_date}] No hay datos.")
+        return
 
-    # 3) Append / upsert al CSV histórico
-    if os.path.exists(STOCKS_FILE):
-        df_history = pd.read_csv(STOCKS_FILE)
+    df_today["Date"] = run_date
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Actualizar CSV
+    if CSV_PATH.exists():
+        df_history = pd.read_csv(CSV_PATH)
         df_combined = (
             pd.concat([df_history, df_today], ignore_index=True)
             .drop_duplicates(subset=["Date", "Ticker"], keep="last")
@@ -44,36 +43,59 @@ def run_stocks_job(**context):
     else:
         df_combined = df_today
 
-    # Crear carpeta destino si no existe
-    os.makedirs(os.path.dirname(STOCKS_FILE), exist_ok=True)
+    df_combined.to_csv(CSV_PATH, index=False)
 
-    df_combined.to_csv(STOCKS_FILE, index=False)
+    # Generar Parquet en staging
+    PARQUET_PATH.parent.mkdir(parents=True, exist_ok=True)
+    df_combined.to_parquet(PARQUET_PATH, index=False)
 
-    print(f"[{run_date}] Data saved/updated in: {STOCKS_FILE}")
+    print(f"[{run_date}] CSV y Parquet actualizados.")
     print(df_combined.tail())
+
+
+def load_to_redshift_task(**context):
+    """Tarea 2: carga el Parquet a Redshift."""
+    schema = os.getenv("REDSHIFT_SCHEMA", "public")
+    table_name = os.getenv("REDSHIFT_TABLE", "stock_prices_history")
+
+    if not PARQUET_PATH.exists():
+        raise FileNotFoundError(f"No existe el Parquet: {PARQUET_PATH}")
+
+    load_parquet_to_redshift(
+        parquet_path=PARQUET_PATH,
+        table_name=table_name,
+        schema=schema,
+        if_exists="append",
+    )
 
 
 default_args = {
     "owner": "airflow",
-    "depends_on_past": True,          # para backfill ordenado
+    "depends_on_past": True,
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
 
 with DAG(
-    dag_id="stocks_daily_dag",
+    dag_id="stocks_redshift_daily_dag",
     default_args=default_args,
-    description="Descarga diaria de precios de acciones con yfinance",
-    schedule_interval="0 10 * * *",   # todos los días 10:00 UTC
-    start_date=datetime(2025, 10, 1), # ajustá desde cuándo querés backfill
-    catchup=True,                     # Airflow maneja el backfill
+    schedule_interval="0 10 * * *",
+    start_date=datetime(2025, 10, 1),
+    catchup=True,
     max_active_runs=1,
-    tags=["stocks", "yfinance", "batch"],
+    tags=["stocks", "yfinance", "redshift"],
 ) as dag:
 
-    fetch_stocks = PythonOperator(
+    fetch_task = PythonOperator(
         task_id="fetch_stocks_daily",
-        python_callable=run_stocks_job,
+        python_callable=fetch_stocks_daily,
     )
 
-    fetch_stocks
+    load_redshift_task = PythonOperator(
+        task_id="load_to_redshift",
+        python_callable=load_to_redshift_task,
+    )
+
+    # Pipeline final:
+    fetch_task >> load_redshift_task
+
