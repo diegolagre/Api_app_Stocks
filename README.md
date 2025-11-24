@@ -62,15 +62,16 @@ Este proyecto implementa un pipeline de datos que:
 
 La función `transform_stock_data(df)` aplica transformaciones de negocio sobre el DataFrame de precios:
 
-- **Normalización**
-  - `Ticker` → convertido a mayúsculas (`AAPL`, `NVDA`, `GOOGL`, etc.).
-- **Casting de tipos**
-  - `Price` → convertido a entero (`int`) usando casting seguro.
-- **Columna derivada**
-  - `Price_Bucket` según el rango de precio:
-    - `LOW`    → precios ≤ 100  
-    - `MEDIUM` → 100 < precio ≤ 500  
-    - `HIGH`   → precio > 500  
+- **Ticker** → convertido a mayúsculas.
+- **Price** → preservado como **float** (tal cual viene desde la fuente).
+- **Price_Bucket** calculado según rangos:
+  - LOW → ≤ 100  
+  - MEDIUM → 100–500  
+  - HIGH → > 500
+
+**Importante:**  
+No se fuerza la conversión a `int` en el pipeline.  
+Los tests unitarios validan que **se puede convertir** sin modificar el código productivo.
 
 Adicionalmente:
 
@@ -83,20 +84,29 @@ Adicionalmente:
 
 Los tests incluidos verifican:
 
-- Uso de mocks para yfinance (sin llamar a la API real).
-- Conversión correcta de precios float → int.
-- Integridad de columnas.
-- Comprobación de transformaciones (`Ticker`, `Price`, `Price_Bucket`).
+Incluyen:
 
-Ejecutarlos:
+### ✔ Test con mock de yfinance
+- Simula la API sin hacer requests reales.
+- Verifica que:
+  - el DataFrame se produce correctamente,
+  - `Price` es float,
+  - puede convertirse a `int` si se necesitara.
 
-```
+### ✔ Test para transformaciones
+- Verifica:
+  - normalización del ticker,
+  - tipo float de Price,
+  - bucketización correcta.
+
+### Ejecutar tests:
+
+```bash
 pytest -q
-```
 
 ---
 
-## 🗄️ Carga a Redshift
+🗄️ Carga a Redshift
 
 `redshift_loader.py`:
 
@@ -107,7 +117,7 @@ pytest -q
 
 Variables necesarias:
 
-```
+
 REDSHIFT_HOST=
 REDSHIFT_PORT=
 REDSHIFT_USER=
@@ -116,11 +126,11 @@ REDSHIFT_DB=
 REDSHIFT_SCHEMA=
 REDSHIFT_TABLE=
 PARQUET_PATH=data/staging/stock_prices_history.parquet
-```
+
 
 ---
 
-## 🌬️ DAG de Airflow
+ 🌬️ DAG de Airflow
 
 `dags/stocks_redshift_daily_dag.py`
 
