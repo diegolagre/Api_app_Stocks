@@ -1,22 +1,23 @@
 version: "3.9"
 
-x-airflow-common:
-  &airflow-common
-  image: apache/airflow:2.9.3
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile.airflow
   env_file:
     - .env
   environment:
-    &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__CORE__LOAD_EXAMPLES: "False"
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
-    AIRFLOW__CORE__FERNET_KEY: "dummy_fernet_key_change_me"
+    AIRFLOW__CORE__FERNET_KEY: "oV8ZJpY3jEoBo2XaG9q4CPGK8PvXHi_Ad_MwxLBzME4="
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
-    # Para que Python pueda importar "app", ya que tu repo se monta en /opt/airflow
     PYTHONPATH: /opt/airflow
+    # ESTO ES NUEVO: instala dependencias dentro del contenedor
+    PIP_ADDITIONAL_REQUIREMENTS: "yfinance sqlalchemy psycopg2-binary pyarrow"
   volumes:
-    - .:/opt/airflow          # repo completo (app, dags, tests, etc.)
+    - .:/opt/airflow
     - airflow_logs:/opt/airflow/logs
     - airflow_plugins:/opt/airflow/plugins
     - airflow_data:/opt/airflow/data
@@ -42,16 +43,7 @@ services:
   airflow-init:
     <<: *airflow-common
     entrypoint: >
-      /bin/bash -c "
-      airflow db init &&
-      airflow users create
-        --username admin
-        --password admin
-        --firstname Admin
-        --lastname User
-        --role Admin
-        --email admin@example.com
-      "
+      /bin/bash -c "airflow db init"
     restart: "no"
 
   airflow-webserver:
