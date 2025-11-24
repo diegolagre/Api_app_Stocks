@@ -1,0 +1,73 @@
+version: "3.9"
+
+x-airflow-common:
+  &airflow-common
+  image: apache/airflow:2.9.3
+  env_file:
+    - .env
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
+    AIRFLOW__CORE__FERNET_KEY: "dummy_fernet_key_change_me"
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
+    # Para que Python pueda importar "app", ya que tu repo se monta en /opt/airflow
+    PYTHONPATH: /opt/airflow
+  volumes:
+    - .:/opt/airflow          # repo completo (app, dags, tests, etc.)
+    - airflow_logs:/opt/airflow/logs
+    - airflow_plugins:/opt/airflow/plugins
+    - airflow_data:/opt/airflow/data
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: >
+      /bin/bash -c "
+      airflow db init &&
+      airflow users create
+        --username admin
+        --password admin
+        --firstname Admin
+        --lastname User
+        --role Admin
+        --email admin@example.com
+      "
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  airflow_logs:
+  airflow_plugins:
+  airflow_data:

@@ -88,7 +88,7 @@ La transformación principal se realiza en **transform_stock_data(df)**:
 - Manejo de nulos  
 - Unificación histórico sin duplicados (`Date`, `Ticker`)  
 
-Estas transformaciones cumplen **exactamente lo que pide el TP**.
+
 
 ---
 
