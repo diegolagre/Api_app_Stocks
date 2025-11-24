@@ -1,253 +1,247 @@
-[![CI Status](https://github.com/diegolagre/Api_app_Stocks/actions/workflows/tests.yml/badge.svg)](https://github.com/diegolagre/Api_app_Stocks/actions/workflows/tests.yml)
-
-[![CI Status](https://github.com/diegolagre/Api_app_Stocks/actions/workflows/tests.yml/badge.svg)](https://github.com/diegolagre/Api_app_Stocks/actions/workflows/tests.yml)
+![CI Status](https://github.com/diegolagre/Api_app_Stocks/actions/workflows/tests.yml/badge.svg)](https://github.com/diegolagre/Api_app_Stocks/actions/workflows/tests.yml)
 
 # API App Stocks – Data Pipeline con Python, Airflow y Redshift
 
-## 📌 ABSTRACT
+## 📌 Descripción general
 
-Este Trabajo Práctico implementa un **pipeline de ingeniería de datos moderno y automatizado**, compuesto por:
+Este proyecto implementa un pipeline de datos que:
 
-- **Ingesta diaria** de datos de acciones desde la API de Yahoo Finance (yfinance)  
-- **Transformaciones explícitas** (normalización, casting, categorización)  
-- Persistencia en **CSV** y **Parquet (staging)**  
-- **Carga incremental a Amazon Redshift**  
-- **Orquestación completa con Apache Airflow** (incluye backfill)  
-- **Calidad garantizada con tests unitarios + mocking**  
-- Integración continua con **GitHub Actions (CI)**  
-
-El pipeline cumple todos los requisitos del TP:
-- Fuente de datos externa  
-- Transformaciones explícitas  
-- DW (Redshift)  
-- Tests manuales + unitarios  
-- Orquestación en Airflow  
-- Flujo reproducible y automatizable  
+- Obtiene diariamente precios de acciones desde la API de Yahoo Finance (`yfinance`).
+- Aplica transformaciones explícitas sobre los datos (normalización, casting y categorización).
+- Guarda el histórico en formato **CSV** y **Parquet**.
+- Carga los datos transformados a **Amazon Redshift** usando SQLAlchemy.
+- Orquesta todo con **Apache Airflow** corriendo en Docker.
+- Asegura calidad con **tests unitarios** y **CI en GitHub Actions**.
 
 ---
 
-# 🏗️ ARQUITECTURA GENERAL DEL PIPELINE
+## 🏗️ Arquitectura del pipeline
 
-        +----------------+
-        |  yfinance API  |
-        +--------+-------+
-                 |
-                 v
-     +-----------------------+
-     |  Extracción (Python)  |
-     |  get_stock_data()     |
-     +-----------+-----------+
-                 |
-                 v
-  +--------------------------------+
-  | Transformación (Python)        |
-  | transform_stock_data()         |
-  | - Normaliza Ticker             |
-  | - Price float → int            |
-  | - Price_Bucket (categorías)    |
-  +--------------+-----------------+
-                 |
-                 v
- +--------------------------------------+
- | Persistencia local                   |
- | - CSV histórico                      |
- | - Parquet staging (data/staging)     |
- +----------------+----------------------+
-                 |
-                 v
-     +------------------------------+
-     |   Carga a Redshift (Python)  |
-     | load_parquet_to_redshift()   |
-     +--------------+---------------+
-                 |
-                 v
-        +-------------------+
-        |   Data Warehouse  |
-        |     Redshift      |
-        +-------------------+
-
-
----
-
-# 🔧 TRANSFORMACIONES IMPLEMENTADAS
-
-La transformación principal se realiza en **transform_stock_data(df)**:
-
-### ✔ Normalización de datos
-- `Ticker` → **mayúsculas**
-- `Price` → **entero seguro** (cast with coercion)
-
-### ✔ Creación de columna derivada (categorización)
-`Price_Bucket`:
-- `LOW` → precios ≤ 100  
-- `MEDIUM` → 100 < precio ≤ 500  
-- `HIGH` → precio > 500  
-
-### ✔ Limpieza
-- Forzar tipos  
-- Manejo de nulos  
-- Unificación histórico sin duplicados (`Date`, `Ticker`)  
-
-
+```text
+            +----------------+
+            |  yfinance API  |
+            +--------+-------+
+                     |
+                     v
+         +-----------------------+
+         |  Extracción (Python)  |
+         |  get_stock_data()     |
+         +-----------+-----------+
+                     |
+                     v
+      +--------------------------------+
+      | Transformación (Python)        |
+      | transform_stock_data()         |
+      | - Normaliza Ticker             |
+      | - Price float → int            |
+      | - Price_Bucket (categorías)    |
+      +--------------+-----------------+
+                     |
+                     v
+     +--------------------------------------+
+     | Persistencia local                   |
+     | - CSV histórico                      |
+     | - Parquet (data/staging)             |
+     +----------------+---------------------+
+                     |
+                     v
+         +------------------------------+
+         |   Carga a Redshift (Python)  |
+         | load_parquet_to_redshift()   |
+         +--------------+---------------+
+                     |
+                     v
+            +-------------------+
+            |   Data Warehouse  |
+            |     Redshift      |
+            +-------------------+
 
 ---
 
-# 🧪 TESTS UNITARIOS
+## 🔧 Transformaciones de datos
 
-Los tests están en `tests/test_get_stock_data.py` e incluyen:
+La función `transform_stock_data(df)` aplica transformaciones de negocio sobre el DataFrame de precios:
 
-### 🟢 Test 1 – Mock de yfinance  
-Valida:
-- no se llama a la API real  
-- conversión Price float → int  
-- DataFrame generado correctamente  
+- **Normalización**
+  - `Ticker` → convertido a mayúsculas (`AAPL`, `NVDA`, `GOOGL`, etc.).
+- **Casting de tipos**
+  - `Price` → convertido a entero (`int`) usando casting seguro.
+- **Columna derivada**
+  - `Price_Bucket` según el rango de precio:
+    - `LOW`    → precios ≤ 100  
+    - `MEDIUM` → 100 < precio ≤ 500  
+    - `HIGH`   → precio > 500  
 
-### 🟢 Test 2 – Integración básica  
-Verifica columna, tipos y estructura.
+Adicionalmente:
 
-### 🟢 Test 3 – transform_stock_data  
-Valida que las transformaciones funcionen:
-
-- uppercase  
-- Price int  
-- Price_Bucket correcto  
-- estructura final
-
-GitHub Actions ejecuta automáticamente todos los tests en cada push.
+- Eliminación de duplicados en el histórico por (`Date`, `Ticker`).
+- Persistencia en CSV + Parquet.
 
 ---
 
-# 🧭 DAG DE AIRFLOW
+## 🧪 Tests unitarios
 
-El DAG principal es:
+Los tests incluidos verifican:
+
+- Uso de mocks para yfinance (sin llamar a la API real).
+- Conversión correcta de precios float → int.
+- Integridad de columnas.
+- Comprobación de transformaciones (`Ticker`, `Price`, `Price_Bucket`).
+
+Ejecutarlos:
+
+```
+pytest -q
+```
+
+---
+
+## 🗄️ Carga a Redshift
+
+`redshift_loader.py`:
+
+- Lee credenciales desde `.env`.
+- Crea engine SQLAlchemy.
+- Lee Parquet: `data/staging/stock_prices_history.parquet`.
+- Ejecuta `to_sql()` hacia Redshift.
+
+Variables necesarias:
+
+```
+REDSHIFT_HOST=
+REDSHIFT_PORT=
+REDSHIFT_USER=
+REDSHIFT_PASSWORD=
+REDSHIFT_DB=
+REDSHIFT_SCHEMA=
+REDSHIFT_TABLE=
+PARQUET_PATH=data/staging/stock_prices_history.parquet
+```
+
+---
+
+## 🌬️ DAG de Airflow
 
 `dags/stocks_redshift_daily_dag.py`
 
 Tareas:
 
-### 1️⃣ fetch_stocks_daily
-- Obtiene datos  
-- Aplica transformaciones  
-- Genera CSV  
-- Genera Parquet en `/opt/airflow/data/staging/`
-
-### 2️⃣ load_to_redshift
-- Lee el parquet  
-- Inserta en Redshift usando SQLAlchemy  
+1. `fetch_stocks_daily`
+2. `load_to_redshift`
 
 Flujo:
 
+```
+fetch_stocks_daily >> load_to_redshift
+```
 
-Se ejecuta diariamente a las 10:00 UTC.
+Escribe CSV y Parquet en:
 
----
-
-# 🗄️ CARGA A REDSHIFT
-
-`app/src/redshift_loader.py`:
-
-- Construye un engine con SQLAlchemy desde variables de entorno  
-- Lee el Parquet  
-- Inserta los datos en Redshift mediante `df.to_sql()`  
-- Maneja creación del schema/tablas según config  
-
-Variables que deben estar presentes (.env):
-
-REDSHIFT_HOST=
-REDSHIFT_PORT=5439
-REDSHIFT_USER=
-REDSHIFT_PASSWORD=
-REDSHIFT_DB=
-REDSHIFT_SCHEMA=public
-REDSHIFT_TABLE=stock_prices_history
-
+```
+data/stock_prices_history.csv
+data/staging/stock_prices_history.parquet
+```
 
 ---
 
-# 📂 ESTRUCTURA DEL PROYECTO
+## 📂 Estructura del proyecto
 
+```
 Api_app_Stocks/
 ├── app/
-│ ├── constants.py
-│ └── src/
-│ ├── get_data.py
-│ ├── redshift_loader.py
-│ └── init.py
-│
+│   ├── constants.py
+│   └── src/
+│       ├── get_data.py
+│       ├── redshift_loader.py
+│       └── __init__.py
 ├── dags/
-│ └── stocks_redshift_daily_dag.py
-│
+│   └── stocks_redshift_daily_dag.py
 ├── tests/
-│ └── test_get_stock_data.py
-│
+│   └── test_get_stock_data.py
 ├── data/
-│ └── staging/
-│ └── stock_prices_history.parquet
-│
-├── .github/workflows/tests.yml
+│   └── staging/
+├── .github/
+│   └── workflows/
+│       └── tests.yml
+├── Dockerfile.airflow
+├── docker-compose.yml
 ├── .env.example
 ├── pyproject.toml
 └── README.md
-
-
----
-
-# 🚀 CÓMO EJECUTAR EL PROYECTO – PASO A PASO
-
-A continuación tenés **todo el walkthrough completo**, tal como lo pediría un evaluador del TP.
+```
 
 ---
 
-## 1️⃣ Clonar el repositorio
+## 💻 Ejecución local (Python)
 
-```bash
-git clone https://github.com/diegolagre/Api_app_Stocks.git
-cd Api_app_Stocks
-
-
-
-##2️⃣ Configurar entorno con uv
+```
 uv sync
-
-##3️⃣ Crear .env
-
-cp .env.example .env
-#Completá con tus credenciales reales de Redshift.
-
-##4️⃣ Ejecutar solo la EXTRACCIÓN (opcional)
-
 uv run python -m app.src.get_data
-
-Esto genera:
-
-stock_prices_history.csv
-data/staging/stock_prices_history.parquet
-
-##5️⃣ Ejecutar solo la CARGA a Redshift (opcional)
-
 uv run python -m app.src.redshift_loader
+```
 
-##6️⃣ Ejecutar TESTS UNITARIOS
+---
 
-pytest -q
+## 🐳 Ejecución con Docker + Airflow
 
-##7️⃣ Levantar Airflow con Docker (si corresponde en tu entorno)
+### 1. Crear archivo `.env`
 
+```
+cp .env.example .env
+```
+
+### 2. Construir la imagen:
+
+```
+docker compose build
+```
+
+### 3. Inicializar Airflow:
+
+```
 docker compose up airflow-init
+```
+
+### 4. Crear usuario admin:
+
+```
+docker compose run --rm airflow-webserver airflow users create   --username admin   --firstname Admin   --lastname User   --role Admin   --email admin@example.com   --password admin
+```
+
+### 5. Levantar Airflow:
+
+```
 docker compose up
+```
 
-#Abrir:
+UI: http://localhost:8080
 
-#👉 http://localhost:8080
+Login: `admin / admin`
 
-#Activar DAG:
+### 6. Activar y correr el DAG
 
-#👉 stocks_redshift_daily_dag
+1. Activar toggle del DAG  
+2. "Trigger DAG"  
+3. Revisar logs de `fetch_stocks_daily` y `load_to_redshift`.
 
-#El pipeline descargará datos → transformará → generará staging → cargará Redshift.
+---
 
-##8️⃣ Verificar los datos en Redshift
+## 🔐 Manejo de credenciales
 
-SELECT * 
-FROM public.stock_prices_history
-ORDER BY date DESC, ticker;
+`.env` debe estar en `.gitignore`  
+`.env.example` solo contiene placeholders.
+
+---
+
+## ✅ Resumen de comandos
+
+```
+pytest -q
+uv sync
+docker compose build
+docker compose up airflow-init
+docker compose run --rm airflow-webserver airflow users create ...
+docker compose up
+docker compose down
+```
+

@@ -1,12 +1,10 @@
 FROM apache/airflow:2.9.3
 
-USER root
+# Usar directamente el usuario airflow para instalar paquetes
+USER airflow
 
-# Instalar dependencias del proyecto
 RUN pip install --no-cache-dir \
     yfinance \
     sqlalchemy \
     psycopg2-binary \
     pyarrow
-
-USER airflow

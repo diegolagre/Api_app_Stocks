@@ -14,13 +14,10 @@ x-airflow-common: &airflow-common
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
     PYTHONPATH: /opt/airflow
-    # ESTO ES NUEVO: instala dependencias dentro del contenedor
-    PIP_ADDITIONAL_REQUIREMENTS: "yfinance sqlalchemy psycopg2-binary pyarrow"
   volumes:
     - .:/opt/airflow
     - airflow_logs:/opt/airflow/logs
     - airflow_plugins:/opt/airflow/plugins
-    - airflow_data:/opt/airflow/data
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     postgres:
@@ -62,4 +59,5 @@ volumes:
   postgres_data:
   airflow_logs:
   airflow_plugins:
-  airflow_data:
+
+  # airflow_data:    # Ya no la voy a usar 
