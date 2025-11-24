@@ -20,23 +20,44 @@ Este proyecto implementa un **pipeline de ingeniería de datos** capaz de:
 
 # 🏗️ 2. Arquitectura del Pipeline
 
-             +----------------+
-             | yfinance API   |
-             +--------+-------+
-                      |
-           get_stock_data()
-                      |
-    +-----------------+-----------------+
-    |                                   |
-stock_prices_history.csv stock_prices_history.parquet
-| |
-transform_stock_data() |
-| |
-+-----------------+-----------------+
-|
-load_parquet_to_redshift()
-|
-Amazon Redshift
+```text
+            +----------------+
+            |  yfinance API  |
+            +--------+-------+
+                     |
+                     v
+         +-----------------------+
+         |  Extracción (Python)  |
+         |  get_stock_data()     |
+         +-----------+-----------+
+                     |
+                     v
+      +--------------------------------+
+      | Transformación (Python)        |
+      | transform_stock_data()         |
+      | - Normaliza Ticker             |
+      | - Price float → int            |
+      | - Price_Bucket (categorías)    |
+      +--------------+-----------------+
+                     |
+                     v
+     +--------------------------------------+
+     | Persistencia local                   |
+     | - CSV histórico                      |
+     | - Parquet (data/staging)             |
+     +----------------+---------------------+
+                     |
+                     v
+         +------------------------------+
+         |   Carga a Redshift (Python)  |
+         | load_parquet_to_redshift()   |
+         +--------------+---------------+
+                     |
+                     v
+            +-------------------+
+            |   Data Warehouse  |
+            |     Redshift      |
+            +-------------------+
 
 
 ---
