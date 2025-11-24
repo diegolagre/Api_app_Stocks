@@ -1,0 +1,21 @@
+# Ignore environment and secrets
+.env
+*.env
+
+# Airflow local data
+airflow_logs/
+airflow_plugins/
+airflow_data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# VSCode
+.vscode/
+
+# Parquet/data locally generated
+data/
+*.parquet
+*.csv
