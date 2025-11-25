@@ -197,9 +197,11 @@ Api_app_Stocks/
 
 # 💻 8. Ejecución local (sin Docker)
 
+```
 uv sync
 uv run python -m app.src.get_data
 uv run python -m app.src.redshift_loader
+```
 
 # 🐳 9. Ejecución con Docker + Airflow
 
@@ -238,14 +240,40 @@ Activar DAG → “Trigger DAG” → Ver logs.
 
 # 🔐 10. Manejo de credenciales
 
+
+
+Crear un archivo .env en la raiz:
+
+```
+Api_app_Stocks/
+├── app/
+│   ├── constants.py
+│   └── src/
+│       ├── get_data.py
+│       ├── redshift_loader.py
+│       └── __init__.py
+├── dags/
+│   └── stocks_redshift_daily_dag.py
+├── tests/
+│   └── test_get_stock_data.py
+├── data/
+│   └── staging/
+├── .github/workflows/tests.yml
+├── Dockerfile.airflow
+├── docker-compose.yml
+├── Makefile
+├── .env.example
+├── .env
+└── pyproject.toml
+```
+
+Se debe tomar como plantilla el archivo .env.example. Pegarlo en el archivo .env y completar las credenciales.
+
 .env debe estar en .gitignore
-
-NO comprometer claves reales
-
-.env.example contiene placeholders
 
 # ✔ 11. Resumen general
 
+```
 pytest -q
 uv sync
 make airflow-build
@@ -254,5 +282,5 @@ make airflow-create-user
 make airflow-up
 make airflow-down
 make airflow-reset
-
+```
 
