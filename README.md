@@ -115,7 +115,7 @@ Ejecutar tests:
 
 pytest -q
 
-🗄️ 5. Carga a Redshift
+# 🗄️ 5. Carga a Redshift
 
 Archivo:
 app/src/redshift_loader.py
@@ -142,7 +142,7 @@ PARQUET_PATH=data/staging/stock_prices_history.parquet
 ⚠ .env no debe ser committeado.
 Usar .env.example como plantilla.
 
-🌬️ 6. DAG de Airflow
+# 🌬️ 6. DAG de Airflow
 
 Ruta:
 dags/stocks_redshift_daily_dag.py
@@ -170,7 +170,7 @@ Flujo:
 fetch_stocks_daily >> load_to_redshift
 
 
-📂 7. Estructura del proyecto
+# 📂 7. Estructura del proyecto
 
 Api_app_Stocks/
 ├── app/
@@ -192,13 +192,14 @@ Api_app_Stocks/
 ├── .env.example
 └── pyproject.toml
 
-💻 8. Ejecución local (sin Docker)
+# 💻 8. Ejecución local (sin Docker)
 
 uv sync
 uv run python -m app.src.get_data
 uv run python -m app.src.redshift_loader
 
-🐳 9. Ejecución con Docker + Airflow
+# 🐳 9. Ejecución con Docker + Airflow
+
 🔹 9.1 Crear .env
 
 cp .env.example .env
@@ -232,7 +233,7 @@ docker compose up
 
 Activar DAG → “Trigger DAG” → Ver logs.
 
-🔐 10. Manejo de credenciales
+# 🔐 10. Manejo de credenciales
 
 .env debe estar en .gitignore
 
@@ -240,7 +241,7 @@ NO comprometer claves reales
 
 .env.example contiene placeholders
 
-✔ 11. Resumen general
+# ✔ 11. Resumen general
 
 pytest -q
 uv sync
