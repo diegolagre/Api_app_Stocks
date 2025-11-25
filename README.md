@@ -172,6 +172,7 @@ fetch_stocks_daily >> load_to_redshift
 
 # 📂 7. Estructura del proyecto
 
+
 Api_app_Stocks/
 ├── app/
 │   ├── constants.py
