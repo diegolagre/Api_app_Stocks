@@ -172,6 +172,28 @@ fetch_stocks_daily >> load_to_redshift
 
 # 📂 7. Estructura del proyecto
 
+Api_app_Stocks/
+├── app/
+│ ├── constants.py
+│ └── src/
+│ ├── get_data.py
+│ ├── redshift_loader.py
+│ └── init.py
+├── dags/
+│ └── stocks_redshift_daily_dag.py
+├── tests/
+│ └── test_get_stock_data.py
+├── data/
+│ └── staging/
+├── .github/
+│ └── workflows/
+│ └── tests.yml
+├── Dockerfile.airflow
+├── docker-compose.yml
+├── Makefile
+├── .env.example
+├── pyproject.toml
+└── README.md
 
 Api_app_Stocks/
 ├── app/
