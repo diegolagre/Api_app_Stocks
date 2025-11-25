@@ -130,6 +130,7 @@ Inserta los datos en Redshift usando to_sql()
 
 Variables necesarias (.env):
 
+```
 REDSHIFT_HOST=
 REDSHIFT_PORT=5439
 REDSHIFT_USER=
@@ -138,7 +139,7 @@ REDSHIFT_DB=
 REDSHIFT_SCHEMA=public
 REDSHIFT_TABLE=stock_prices_history
 PARQUET_PATH=data/staging/stock_prices_history.parquet
-
+```
 ⚠ .env no debe ser committeado.
 Usar .env.example como plantilla.
 
