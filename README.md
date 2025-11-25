@@ -58,7 +58,7 @@ Este proyecto implementa un **pipeline de ingeniería de datos** capaz de:
             |   Data Warehouse  |
             |     Redshift      |
             +-------------------+
-
+'''
 
 ---
 
