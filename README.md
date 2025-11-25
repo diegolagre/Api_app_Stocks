@@ -20,7 +20,7 @@ Este proyecto implementa un **pipeline de ingeniería de datos** capaz de:
 
 # 🏗️ 2. Arquitectura del Pipeline
 
-```text
+
             +----------------+
             |  yfinance API  |
             +--------+-------+
@@ -57,7 +57,7 @@ Este proyecto implementa un **pipeline de ingeniería de datos** capaz de:
             +-------------------+
             |   Data Warehouse  |
             |     Redshift      |
-            +-------------------+'''
+            +-------------------+
 
 
 ---
