@@ -112,7 +112,7 @@ Los tests cubren:
 
 Ejecutar tests:
 
-```bash
+
 pytest -q
 
 🗄️ 5. Carga a Redshift
