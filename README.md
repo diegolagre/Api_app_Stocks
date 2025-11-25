@@ -213,10 +213,12 @@ Completar valores.
 
 🔹 9.2 Comandos con Makefile (recomendado)
 
+```
 make airflow-build
 make airflow-init
 make airflow-create-user
 make airflow-up
+```
 
 Airflow UI:
 👉 http://localhost:8080
