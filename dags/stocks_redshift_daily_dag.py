@@ -66,6 +66,7 @@ def load_to_redshift_task(**context):
         table_name=table_name,
         schema=schema,
         if_exists="append",
+        recreate_table=True,  # cambio: dropea la tabla y la recrea con el schema actual
     )
 
 

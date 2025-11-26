@@ -37,6 +37,54 @@ def get_redshift_engine() -> Engine:
     return create_engine(url)
 
 
+def load_parquet_to_redshift(parquet_path, table_name, schema=None, if_exists="append", recreate_table=False):
+    """
+    Carga datos desde Parquet a Redshift.
+    Si recreate_table=True, dropea la tabla y Pandas la vuelve a crear.
+    """
+    parquet_path = Path(parquet_path)
+
+    if not parquet_path.exists():
+        raise FileNotFoundError(f"No existe el archivo Parquet: {parquet_path}")
+
+    df = pd.read_parquet(parquet_path)
+
+    if df.empty:
+        print(f"No hay datos para cargar desde {parquet_path}")
+        return
+
+    engine = get_redshift_engine()
+
+    # ---------------------------------------------
+    #  OPCIONAL: borrar tabla antes de recrearla
+    # ---------------------------------------------
+    if recreate_table:
+        with engine.begin() as conn:
+            print(f"⚠️ Dropeando tabla {schema}.{table_name} en Redshift…")
+            conn.exec_driver_sql(f"""
+                DROP TABLE IF EXISTS {schema}.{table_name};
+            """)
+
+    print(
+        f"Cargando {len(df)} filas a Redshift "
+        f"(schema={schema}, table={table_name}, if_exists={if_exists})"
+    )
+
+    # Pandas recreará la tabla con el schema del DataFrame
+    with engine.begin() as conn:
+        df.to_sql(
+            name=table_name,
+            con=conn,
+            schema=schema,
+            if_exists=if_exists,
+            index=False,
+        )
+
+    print(" Carga a Redshift finalizada.")
+
+
+
+'''
 def load_parquet_to_redshift(parquet_path, table_name, schema=None, if_exists="append"):
     """
     Carga un archivo Parquet a una tabla de Redshift usando pandas.to_sql.
@@ -75,7 +123,7 @@ def load_parquet_to_redshift(parquet_path, table_name, schema=None, if_exists="a
         )
 
     print("✅ Carga a Redshift finalizada.")
-
+'''
 
 def main() -> None:
     """
