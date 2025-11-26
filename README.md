@@ -61,7 +61,7 @@ Este proyecto implementa un **pipeline de ingeniería de datos** capaz de:
 
 
 ---
-# 🏗️ 2. Arquitectura del Pipeline
+
 # 🔧 3. Transformaciones aplicadas
 
 La función `transform_stock_data(df)` realiza:
